@@ -34,6 +34,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <poll.h>
 #include <sys/sysinfo.h>
 #include <netinet/tcp.h>
+#include <getopt.h>
 #include "BearSSL/inc/bearssl.h"
 #include "config.h"
 #include "TA.h"
@@ -69,6 +70,8 @@ br_x509_minimal_context minimal_context;
 br_sslio_context sslio_context;
 char **mount_paths = NULL;
 char *mount_paths_default[] = { "/", NULL };
+
+const char *submit_path = "/submit";
 
 #define IN_READ(ptr) (ptr < (file_buf + read_len))
 
@@ -485,7 +488,9 @@ upload_data:
         header.stats_count = stats_count;
     }
     http_req_len = 0;
-    str_append(http_buf, &http_req_len, "POST /submit HTTP/1.1\r\nHost: ");
+    str_append(http_buf, &http_req_len, "POST ");
+    str_append(http_buf, &http_req_len, submit_path);
+    str_append(http_buf, &http_req_len, " HTTP/1.1\r\nHost: ");
     str_append(http_buf, &http_req_len, host);
     str_append(http_buf, &http_req_len, "\r\nContent-Length: ");
     str_append_uint(http_buf, &http_req_len, content_length);
@@ -521,13 +526,34 @@ void collect_and_upload(void) {
 int main(int argc, char **argv) {
     COMPILE_TIME_CHECKS
     COMPILE_TIME_ASSERT(sizeof(jiffies_spent_t) == 96);
-    if (argc < 2) {
+
+    static struct option long_options[] = {
+        {"submit-path", required_argument, NULL, 's'},
+        {NULL, 0, NULL, 0}
+    };
+
+    int c;
+    while ((c = getopt_long(argc, argv, "s:", long_options, NULL)) != -1) {
+        switch (c) {
+            case 's':
+                submit_path = optarg;
+                break;
+            default:
+                break;
+        }
+    }
+
+    if (argc < optind) {
         write(2, SLEN("Missing argument!\nmonitoring_agent DOMAIN [TOKEN_PATH] [MOUNT]...\n"));
         return 99;
     }
-    host = argv[1];
+    host = argv[optind];
+    optind++; 
+
     signal(SIGPIPE, SIG_IGN);
-    int fd = open(argc >= 3 ? argv[2] : CONFIG_DEFAULT_TOKEN_PATH, O_RDONLY);
+    const char *token_path = (optind < argc) ? argv[optind] : CONFIG_DEFAULT_TOKEN_PATH;
+    optind++; 
+    int fd = open(token_path, O_RDONLY);
     if (fd == -1 || read(fd, header.token, 32) < 32) {
         close(fd);
         write(2, "Error reading token!\n", strlen("Error reading token!\n"));
@@ -536,9 +562,8 @@ int main(int argc, char **argv) {
     close(fd);
     header.token[32] = '\0';
     header.version = 1;
-    if (argc > 3) {
-        argv[2] = "/";
-        mount_paths = argv + 2;
+    if (argc > optind) {
+        mount_paths = argv + optind;
     } else
         mount_paths = mount_paths_default;
     br_ssl_client_init_full(&client_context, &minimal_context, TAs, TAs_NUM);

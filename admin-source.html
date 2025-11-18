@@ -50,7 +50,7 @@ function showTab(name) {
 var closeModals = () => document.querySelectorAll('.modal').forEach(m => m.classList.add('hidden'));
 
 function checkAuth() {
-    fetch('/admin/logged_in')
+    fetch('./admin/logged_in')
     .then(data => {
         if (data.ok) {
             $('login').style.display = 'none';
@@ -65,7 +65,7 @@ function checkAuth() {
 function login() {
     hash($('password').value)
     .then(hash => {
-        fetch('/admin/login', {
+        fetch('./admin/login', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({hash: hash})
@@ -90,7 +90,7 @@ function login() {
 }
 
 function loadData() {
-    fetch('/admin/data')
+    fetch('./admin/data')
     .then(response => {
         if (response.status != 200)
             throw new Error();
@@ -106,7 +106,7 @@ function loadData() {
 }
 
 function save() {
-    fetch('/admin/data', {
+    fetch('./admin/data', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify(data)
@@ -150,14 +150,14 @@ function refreshMonitors() {
     var tbody = $('monitors').querySelector('tbody');
     tbody.innerHTML = '';
     for (var [token, monitor] of Object.entries(data.monitors).reverse())
-        tbody.insertRow().innerHTML = `<td><a href="/monitor/${token}">${monitor[1]}</a></td><td>${monitor[2] ? 'Yes' : 'No'}</td><td><button onclick="editMonitor('${token}');">Edit</button><button onclick="copy('${token}');">Copy command</button><button onclick="deleteMonitor('${token}');">Delete</button><button onclick="showAddToPageModal('${token}');">Add to status page</button></td>`;
+        tbody.insertRow().innerHTML = `<td><a href="monitor/${token}">${monitor[1]}</a></td><td>${monitor[2] ? 'Yes' : 'No'}</td><td><button onclick="editMonitor('${token}');">Edit</button><button onclick="copy('${token}');">Copy command</button><button onclick="deleteMonitor('${token}');">Delete</button><button onclick="showAddToPageModal('${token}');">Add to status page</button></td>`;
 }
 
 function refreshPages() {
     var tbody = $('pages').querySelector('tbody');
     tbody.innerHTML = '';
     for (var [path, page] of Object.entries(data.pages))
-        tbody.insertRow().innerHTML = `<td><a href="/${path}">${page[0]}</a></td><td><a style="font-weight:normal" href="/${path === 'main' ? '' : path}">https://${window.location.host}${path === 'main' ? '' : `/${path}`}</a>${path === 'main' ? '<span style="user-select:none"> (when not logged in)</span>' : ''}</td><td>${page[1] ? 'Yes' : 'No'}</td><td>${page[2].length}</td><td><button onclick="editPage('${path}');">Edit</button>${path === 'main' ? '' : `<button onclick="deletePage('${path}');">Delete</button>`}</td>`;
+        tbody.insertRow().innerHTML = `<td><a href="${path}">${page[0]}</a></td><td><a style="font-weight:normal" href="${path === 'main' ? '' : path}">https://${window.location.host}${path === 'main' ? '' : `/${path}`}</a>${path === 'main' ? '<span style="user-select:none"> (when not logged in)</span>' : ''}</td><td>${page[1] ? 'Yes' : 'No'}</td><td>${page[2].length}</td><td><button onclick="editPage('${path}');">Edit</button>${path === 'main' ? '' : `<button onclick="deletePage('${path}');">Delete</button>`}</td>`;
 }
 
 function editMonitor(token = null) {
